@@ -1,165 +1,104 @@
 /**
- * /common/logic.js 
- * 修正版：消除了重复定义错误，统一了导出格式
+ * 智能分析引擎 - 动态因子驱动架构
+ * 确保“因人而异”，千人千面
  */
 
-// --- 基础数据 ---
 const GAN = ["甲", "乙", "丙", "丁", "戊", "己", "庚", "辛", "壬", "癸"];
 const ZHI = ["子", "丑", "寅", "卯", "辰", "巳", "午", "未", "申", "酉", "戌", "亥"];
-const ZODIACS = ["摩羯座", "水瓶座", "双鱼座", "白羊座", "金牛座", "双子座", "巨蟹座", "狮子座", "处女座", "天秤座", "天蝎座", "射手座"];
-const ZODIAC_DAYS = [20, 19, 21, 20, 21, 22, 23, 23, 23, 24, 23, 22];
 
-// 1. 命理计算函数
-const getZodiac = (month, day) => {
-	return day < ZODIAC_DAYS[month - 1] ? ZODIACS[month - 1] : ZODIACS[month % 12];
+// --- 核心算法：生成唯一特征指纹 ---
+const getFingerprint = (name, bazi) => {
+	let hash = 0;
+	const str = name + bazi;
+	for (let i = 0; i < str.length; i++) {
+		hash = ((hash << 5) - hash) + str.charCodeAt(i);
+		hash |= 0; 
+	}
+	return Math.abs(hash);
 };
 
-const getBaZi = (year, month, day, hour) => {
-	const yGan = GAN[(year - 4) % 10];
-	const yZhi = ZHI[(year - 4) % 12];
-	const hZhi = ZHI[Math.floor(((hour + 1) % 24) / 2)];
-	return `${yGan}${yZhi}年 ${month}月${day}日 ${hZhi}时`;
-};
-
+// --- 智能深度分析函数 ---
 const generateFateAnalysis = (name, zodiac, bazi, profession) => {
-	const traits = ["思维缜密", "执行力强", "富有灵感", "沉稳持重"];
-	let seed = 0;
-	const str = name + zodiac + profession;
-	for (let i = 0; i < str.length; i++) seed += str.charCodeAt(i);
+	const fp = getFingerprint(name, bazi);
 	
+	// 1. 职业称谓的人性化平滑处理
+	const profTransform = {
+		"无业": ["潜龙在渊的开拓者", "待时而动的思想家", "静谧修行的智者"],
+		"学生": ["锐意进取的求知者", "博学笃行的后浪", "深耕未来的探索者"],
+		"创业者": ["披荆斩棘的统帅", "寻找蓝海的航海家", "极具韧性的构建者"]
+	};
+	const humanProf = profTransform[profession] ? profTransform[profession][fp % 3] : `${profession}领域的深耕者`;
+
+	// 2. 星座深度解构 (基于指纹动态组合)
+	const zodiacTraits = {
+		"核心": [`${zodiac}座的特质在您身上表现为一种隐性的${fp % 2 === 0 ? '爆发力' : '持久力'}。`, `您的${zodiac}位显示，能量场往往在${fp % 4 === 0 ? '静谧' : '交互'}中达到巅峰。`],
+		"深度": ["在处理决策时，您具备一种天然的避险本能，这让您在2026年的多变环境下能保持清醒。", "您对他人的感知力极强，这种细腻的情感触觉是您建立核心竞争力的关键。"]
+	};
+	const zodiacText = `${zodiacTraits.核心[fp % 2]} ${zodiacTraits.深度[fp % 2]} 这种特质决定了您在未来的目标设定中，不应追求表面的速度，而应注重底层的稳固。在接下来的周期内，星盘指示您的创造力将集中爆发，建议预留出专门的复盘时间以校准方向。`;
+
+	// 3. 八字乾坤解构 (基于五行权重模拟)
+	const elements = ["木气", "火性", "土蕴", "金锋", "水韵"];
+	const mainElement = elements[fp % 5];
+	const baziText = `从您的八字${bazi}观察，命格中${mainElement}最为纯正，这象征着一种${fp % 2 === 0 ? '向上生长' : '向内聚能'}的力量。您的人生底色中带有“宁静致远”的韵味，这意味着在高压环境下，您比常人更容易寻找到突破口。命理预示，您在2026年适合开启具有“播种”性质的长线计划，避开短期的盲目跟风。您的气场与${["东方", "南方", "西方", "北方"][fp % 4]}契合，在此方位执行任务效率将提升。`;
+
+	// 4. 性格优劣与定制化建议
+	const advs = [
+		"您的优点是具备极强的逻辑自洽能力，能将零散的信息串联成完整的行动方案。但需注意，偶尔的完美主义会消耗您过多的精力。",
+		"您性格中的包容力是巨大的财富，这让您在团队或合作中无往不利。弱点在于面对冲突时容易选择退让，建议在目标执行中更加果断。",
+		"锐利的直觉是您的天赋，您往往能洞察到事物表象下的真实动向。不过，请警惕这种敏感带来的情绪波动，保持心境平和是修行的核心。"
+	];
+	const characterText = `作为一名${humanProf}，${advs[fp % 3]} 建议您在接下来的修行中，采用“模块化推进”策略，每达成一个小目标即给予自己正向反馈。这种性格驱动的模式将确保您在长达30天的周期内不会感到职业倦怠或目标疲劳。`;
+
 	return {
-		summary: `作为${profession}，你具备${traits[seed % traits.length]}的特质。`,
-		yijing: "天行健，君子以自强不息。适合开启长线计划。",
-		lucky_direction: ["东", "南", "西", "北"][seed % 4],
-		lucky_color: ["玄青", "赤红", "月白", "黛蓝"][seed % 4]
+		summary: characterText,
+		zodiacAnalysis: zodiacText,
+		baziAnalysis: baziText,
+		lucky_direction: ["东", "南", "西", "北"][fp % 4],
+		lucky_color: ["玄青", "赤红", "月白", "黛蓝"][fp % 4]
 	};
 };
 
-/**
- * /common/logic.js 强化版
- * 引入动态步长算法，确保每一天任务的唯一性和递进性
- */
+// --- 智能任务生成引擎 (根据性格指纹差异化) ---
+const _getDailyActions = (goal, dayIdx, totalDays, fp) => {
+	const progress = dayIdx / totalDays;
+	const isActionOriented = fp % 2 === 0; // 是否为行动导向型性格
 
-// 核心建议矩阵
-const BEHAVIOR_MATRIX = {
-    "学习/背诵": {
-        base: ["记忆", "听读", "默写", "应用"],
-        verb: "攻克"
-    },
-    "运动/健身": {
-        base: ["热身", "核心", "拉伸", "呼吸"],
-        verb: "挑战"
-    },
-    "通用/工作": {
-        base: ["调研", "执行", "复盘", "优化"],
-        verb: "推进"
-    }
+	// 根据性格指纹调整任务侧重点
+	const tasks = [];
+	if (isActionOriented) {
+		tasks.push({ title: "高强度执行", desc: `今日进入${goal}实操阶段，建议完成 ${5 + dayIdx} 组深度练习，追求量变。` });
+		tasks.push({ title: "效率监测", desc: "记录完成每项子任务的实际耗时，优化后续动作。" });
+	} else {
+		tasks.push({ title: "深度思考", desc: `针对${goal}的底层逻辑进行梳理，尝试用思维导图画出今日的心得。` });
+		tasks.push({ title: "质感打磨", desc: "不追求速度，仅对昨日的一个核心痛点进行彻底攻克。" });
+	}
+	
+	// 增加一条与命理挂钩的每日小贴士
+	if (dayIdx % 3 === 0) {
+		tasks.push({ title: "能量校准", desc: "面向您的吉位深呼吸3分钟，清理思维杂讯。" });
+	}
+
+	return tasks;
 };
 
-const _getDailyActions = (goal, dayIndex, totalDays) => {
-    // 1. 确定目标领域
-    let category = "通用/工作";
-    if (goal.includes("语") || goal.includes("音") || goal.includes("背")) category = "学习/背诵";
-    if (goal.includes("减") || goal.includes("练") || goal.includes("跑")) category = "运动/健身";
+const generateMindMapPlan = (goal, durationType, userInfo) => {
+	const fp = getFingerprint(userInfo.name, userInfo.bazi || '');
+	const daysCount = durationType === 'week' ? 7 : 30;
+	let taskList = [];
+	let startDate = new Date();
 
-    const matrix = BEHAVIOR_MATRIX[category];
-    const progress = dayIndex / totalDays;
-    
-    // 2. 动态生成具体数值 (让用户感到精准)
-    // 比如：第1天记5个，第5天记15个；或者第1天跑2km，第10天跑5km
-    const intensity = Math.floor(5 + (dayIndex * 1.5)); 
-    const depth = Math.floor(progress * 100);
-
-    // 3. 构建递进式行动建议
-    let actions = [];
-    
-    if (category === "学习/背诵") {
-        actions = [
-            { 
-                title: `${matrix.verb}新知`, 
-                desc: `今日目标：精准记忆第 ${Math.floor(dayIndex * 3 + 1)} - ${Math.floor(dayIndex * 3 + 3)} 个${goal.slice(-2)}，确保发音标准。`, 
-                done: false 
-            },
-            { 
-                title: "结构化复习", 
-                desc: `针对前 ${dayIndex > 0 ? dayIndex : 1} 天遗忘曲线，快速回顾 ${Math.floor(intensity/2)} 个旧点。`, 
-                done: false 
-            },
-            { 
-                title: "实战模拟", 
-                desc: `完成 ${Math.floor(intensity/3 + 1)} 组闭环练习，今日修行深度已达 ${depth}%。`, 
-                done: false 
-            }
-        ];
-    } else if (category === "运动/健身") {
-        actions = [
-            { 
-                title: "动态启动", 
-                desc: `进行 ${intensity} 分钟专项激活，提升${goal.slice(0,2)}效率。`, 
-                done: false 
-            },
-            { 
-                title: "高阶执行", 
-                desc: `执行${goal}核心动作，完成 ${3 + Math.floor(dayIndex/2)} 组，每组坚持 ${10+dayIndex} 秒。`, 
-                done: false 
-            }
-        ];
-    } else {
-        // 通用型目标
-        actions = [
-            { 
-                title: "阶段性推进", 
-                desc: `当前进度：${depth}%。今日重点：处理${goal}中的第 ${dayIndex + 1} 个关键环节。`, 
-                done: false 
-            },
-            { 
-                title: "逻辑重构", 
-                desc: "对照初衷，优化执行路径，记录 1 条新的心得。", 
-                done: false 
-            }
-        ];
-    }
-
-    // 4. 插入命理建议 (人命各异)
-    if (dayIndex % 3 === 0) {
-        actions.push({
-            title: "天机提示",
-            desc: `今日能量处于上升期，建议在${new Date().getHours() < 12 ? '上午' : '傍晚'}集中处理难点。`,
-            done: false
-        });
-    }
-
-    return actions;
+	for (let i = 0; i < daysCount; i++) {
+		let currDate = new Date(startDate);
+		currDate.setDate(startDate.getDate() + i);
+		taskList.push({
+			date: currDate.toISOString().split('T')[0],
+			dayLabel: `第${i + 1}天`,
+			actions: _getDailyActions(goal, i, daysCount, fp),
+			result: null,
+			isReported: false
+		});
+	}
+	return taskList;
 };
 
-const generateMindMapPlan = (goal, durationType, isWeekendRest) => {
-    const dayConfig = { 'week': 7, 'month': 30, 'halfYear': 180, 'year': 365 };
-    const daysCount = dayConfig[durationType] || 7;
-    let taskList = [];
-    let startDate = new Date();
-
-    for (let i = 0; i < daysCount; i++) {
-        let currDate = new Date(startDate);
-        currDate.setDate(startDate.getDate() + i);
-        const dateStr = currDate.toISOString().split('T')[0];
-        const isRestDay = (currDate.getDay() === 0 || currDate.getDay() === 6) && isWeekendRest;
-
-        taskList.push({
-            date: dateStr,
-            dayLabel: `第${i + 1}天`,
-            isRest: isRestDay,
-            actions: isRestDay ? [] : _getDailyActions(goal, i, daysCount),
-            feedback: "",
-            status: 'pending'
-        });
-    }
-    return taskList;
-};
-
-// --- 统一导出 ---
-export default {
-	getZodiac,
-	getBaZi,
-	generateFateAnalysis,
-	generateMindMapPlan
-};
+export default { getZodiac, getBaZi, generateFateAnalysis, generateMindMapPlan };
