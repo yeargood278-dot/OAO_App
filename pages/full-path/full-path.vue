@@ -1,42 +1,39 @@
 <template>
 	<view class="container">
-		<view class="header">
-			<text class="title">目标全景图</text>
-			<text class="subtitle">共 {{taskList.length}} 天 · 当前第 {{currentDayIdx + 1}} 天</text>
+		<view class="map-header">
+			<text class="map-title">修行全景图</text>
+			<text class="map-subtitle">基于天机指纹生成的{{taskList.length}}日行动路径</text>
 		</view>
 
-		<scroll-view scroll-y class="map-scroll">
-			<view class="path-line">
-				<view v-for="(day, index) in taskList" :key="index" 
-					class="day-node" 
-					:class="{ 'is-past': index < currentDayIdx, 'is-today': index === currentDayIdx }">
+		<scroll-view scroll-y class="path-scroll">
+			<view class="path-container">
+				<view class="node root-node">
+					<view class="node-circle">心之所向</view>
+					<text class="node-label">{{currentGoal.title}}</text>
+				</view>
+
+				<view v-for="(day, index) in taskList" :key="index" class="path-branch">
+					<view class="connector-line" :class="{'line-active': day.isReported}"></view>
 					
-					<view class="node-sidebar">
-						<view class="dot"></view>
-						<view class="line" v-if="index !== taskList.length - 1"></view>
-					</view>
-
-					<view class="node-content">
-						<view class="day-info">
-							<text class="date-label">{{day.dayLabel}} ({{day.date}})</text>
-							<text v-if="index === currentDayIdx" class="badge">今日</text>
-						</view>
-
-						<view v-if="day.isRest" class="rest-card">🍀 休息整备，顺势而为</view>
-						
-						<view v-else class="actions-list">
-							<view v-for="(action, aIdx) in day.actions" :key="aIdx" class="action-item">
-								<text class="action-dot">└</text>
-								<text class="action-title" :class="{ 'text-done': action.done }">
-									{{action.title}}
+					<view class="day-node" :class="{'node-active': day.isReported, 'node-today': day.isToday}">
+						<view class="day-marker">{{index + 1}}</view>
+						<view class="day-content">
+							<view class="day-head">
+								<text class="day-name">{{day.dayLabel}}</text>
+								<text class="day-status" v-if="day.result">{{getResultText(day.result)}}</text>
+							</view>
+							<view class="action-preview">
+								<text v-for="(act, aIdx) in day.actions" :key="aIdx" class="preview-item">
+									· {{act.title}}
 								</text>
 							</view>
 						</view>
-						
-						<view v-if="day.feedback" class="node-feedback">
-							“ {{day.feedback}} ”
-						</view>
 					</view>
+				</view>
+
+				<view class="connector-line"></view>
+				<view class="node end-node">
+					<view class="node-circle">功德圆满</view>
 				</view>
 			</view>
 		</scroll-view>
@@ -47,51 +44,63 @@
 	export default {
 		data() {
 			return {
-				taskList: [],
-				currentDayIdx: 0
+				currentGoal: {},
+				taskList: []
 			}
 		},
-		onLoad() {
-			const tasks = uni.getStorageSync('currentTasks');
-			if (tasks) {
-				this.taskList = tasks;
+		onShow() {
+			this.loadPath();
+		},
+		methods: {
+			loadPath() {
+				const tasks = uni.getStorageSync('currentTasks');
+				const goal = uni.getStorageSync('currentGoal');
 				const nowStr = new Date().toISOString().split('T')[0];
-				this.currentDayIdx = this.taskList.findIndex(t => t.date === nowStr);
+				
+				if (tasks) {
+					this.taskList = tasks.map(t => ({
+						...t,
+						isToday: t.date === nowStr
+					}));
+					this.currentGoal = goal;
+				}
+			},
+			getResultText(res) {
+				const dict = { all: '圆满', part: '进取', none: '待发' };
+				return dict[res] || '';
 			}
 		}
 	}
 </script>
 
 <style>
-	.container { padding: 30rpx; background: #f4f6f9; min-height: 100vh; }
-	.header { margin-bottom: 40rpx; text-align: center; }
-	.title { font-size: 40rpx; font-weight: bold; color: #6b52ae; display: block; }
-	.subtitle { font-size: 24rpx; color: #999; }
+	.container { background: #f0f2f5; min-height: 100vh; padding: 40rpx; }
+	.map-header { text-align: center; margin-bottom: 60rpx; }
+	.map-title { font-size: 36rpx; font-weight: bold; color: #333; }
+	.map-subtitle { font-size: 24rpx; color: #999; margin-top: 10rpx; display: block; }
 
-	.map-scroll { height: calc(100vh - 150rpx); }
-	.path-line { padding-left: 20rpx; }
+	.path-container { display: flex; flex-direction: column; align-items: center; padding-bottom: 100rpx; }
+	
+	/* 核心节点样式 */
+	.node-circle { width: 140rpx; height: 140rpx; border-radius: 50%; background: #6b52ae; color: #fff; display: flex; align-items: center; justify-content: center; font-size: 24rpx; text-align: center; box-shadow: 0 10rpx 20rpx rgba(107,82,174,0.3); z-index: 2; }
+	.node-label { margin-top: 20rpx; font-size: 28rpx; font-weight: bold; color: #6b52ae; max-width: 300rpx; text-align: center; }
 
-	.day-node { display: flex; margin-bottom: 0; }
-	.node-sidebar { width: 40rpx; display: flex; flex-direction: column; align-items: center; }
-	.dot { width: 20rpx; height: 20rpx; border-radius: 50%; background: #ddd; z-index: 2; margin-top: 15rpx; }
-	.line { width: 4rpx; flex: 1; background: #ddd; }
+	/* 连接线 */
+	.connector-line { width: 4rpx; height: 60rpx; background: #ddd; margin: 10rpx 0; }
+	.line-active { background: #6b52ae; }
 
-	/* 状态样式 */
-	.is-past .dot { background: #6b52ae; opacity: 0.5; }
-	.is-past .line { background: #6b52ae; opacity: 0.3; }
-	.is-today .dot { background: #6b52ae; box-shadow: 0 0 15rpx #6b52ae; transform: scale(1.3); }
-	.is-today .line { background: #ddd; }
+	/* 每日节点卡片 */
+	.day-node { width: 90%; background: #fff; border-radius: 20rpx; display: flex; padding: 30rpx; box-shadow: 0 4rpx 15rpx rgba(0,0,0,0.05); position: relative; border: 2rpx solid transparent; }
+	.node-today { border-color: #ff9800; background: #fff9f0; transform: scale(1.02); }
+	.node-active { border-left: 10rpx solid #6b52ae; }
 
-	.node-content { flex: 1; padding-bottom: 60rpx; padding-left: 30rpx; }
-	.day-info { display: flex; align-items: center; margin-bottom: 15rpx; }
-	.date-label { font-size: 28rpx; font-weight: bold; color: #333; }
-	.badge { background: #6b52ae; color: #fff; font-size: 20rpx; padding: 2rpx 10rpx; border-radius: 6rpx; margin-left: 15rpx; }
+	.day-marker { width: 50rpx; height: 50rpx; background: #eee; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 22rpx; color: #666; margin-right: 25rpx; flex-shrink: 0; }
+	.node-active .day-marker { background: #6b52ae; color: #fff; }
 
-	.actions-list { background: #fff; border-radius: 12rpx; padding: 20rpx; border: 1px solid #eee; }
-	.action-item { font-size: 24rpx; color: #666; margin-bottom: 10rpx; display: flex; }
-	.action-dot { color: #ccc; margin-right: 10rpx; }
-	.text-done { text-decoration: line-through; color: #bbb; }
-
-	.rest-card { background: #fff9db; color: #f08c00; font-size: 24rpx; padding: 20rpx; border-radius: 12rpx; border: 1px dashed #f08c00; }
-	.node-feedback { font-size: 22rpx; color: #999; font-style: italic; margin-top: 15rpx; }
+	.day-content { flex: 1; }
+	.day-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15rpx; }
+	.day-name { font-size: 28rpx; font-weight: bold; }
+	.day-status { font-size: 20rpx; color: #07c160; background: #e8f5e9; padding: 2rpx 12rpx; border-radius: 4rpx; }
+	.action-preview { display: flex; flex-direction: column; gap: 8rpx; }
+	.preview-item { font-size: 24rpx; color: #777; }
 </style>
