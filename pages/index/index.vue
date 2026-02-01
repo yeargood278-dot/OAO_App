@@ -1,204 +1,115 @@
 <template>
 	<view class="container">
-		<view v-if="yesterdayReport" class="yesterday-box">
-			<view class="box-header">
-				<text class="box-title">昨日功课复盘</text>
-				<text class="box-rate">完成率: {{yesterdayReport.rate}}%</text>
+		<view class="header">
+			<view>
+				<text class="greet">{{greetText}}，{{uName}}</text>
+				<text class="goal-now">🎯 {{uGoal}}</text>
 			</view>
-			<view class="report-content">
-				<text class="feedback-text">心得：{{yesterdayReport.feedback || '持之以恒，金石可镂'}}</text>
+			<view class="p-circle">
+				<text class="p-val">{{progress}}%</text>
 			</view>
 		</view>
 
-		<view class="mind-map-container" v-if="todayTask">
-			<view class="center-node">
-				<view class="glow-bg"></view>
-				<text class="goal-text">{{currentGoal.title || '当前目标'}}</text>
-				<text class="duration-text">{{currentGoal.typeName}} · {{todayTask.dayLabel}}</text>
+		<view class="task-box" v-if="todayTask">
+			<view class="task-head">
+				<text>今日行动建议</text>
+				<text class="day-tag">{{todayTask.dayLabel}}</text>
 			</view>
-
-			<view class="branch-container">
-				<view class="task-card" v-for="(action, index) in todayTask.actions" :key="index">
-					<view class="connector-line"></view>
-					<view class="task-content" :class="{ 'done-bg': action.done }">
-						<view class="task-main">
-							<text class="task-title">{{action.title}}</text>
-							<text class="task-desc">{{action.desc}}</text>
-						</view>
-						<checkbox :checked="action.done" @click="toggleAction(index)" color="#6b52ae" />
-					</view>
-				</view>
-				
-				<view v-if="todayTask.isRest" class="rest-node">
-					<text>🍀 今日休整，顺应天时</text>
+			<view class="item" v-for="(a, i) in todayTask.actions" :key="i">
+				<text class="idx">{{i+1}}</text>
+				<view class="cont">
+					<text class="t">{{a.title}}</text>
+					<text class="d">{{a.desc}}</text>
 				</view>
 			</view>
 		</view>
 
-		<view class="feedback-area" v-if="todayTask && !todayTask.isRest">
-			<view class="label-row">
-				<text class="label">今日心得记录</text>
-				<text class="save-tip" v-if="isSaving">自动保存中...</text>
+		<view class="review-box">
+			<text class="rev-title">今日行动评定</text>
+			<view class="btns">
+				<view v-for="o in opts" :key="o.v" @click="res=o.v" :class="['btn', res==o.v?'active':'']">
+					{{o.n}}
+				</view>
 			</view>
-			<textarea 
-				v-model="todayFeedback" 
-				placeholder="记录下今日执行的感悟，将作为明日复盘的参考..." 
-				@input="saveFeedback" 
-			/>
+			<button class="save-btn" @click="save">保存今日进展</button>
 		</view>
 
-		<view class="footer-actions">
-			<button class="btn-outline" @click="navToAllTasks">全周期路径图</button>
-			<button class="btn-summary" @click="navToSummary">查看结业报告</button>
-		</view>
-
-		<view v-if="!hasUser" class="error-view">
-			<text>数据未就绪，请重新录入</text>
-			<button @click="reInit">返回初始化</button>
-		</view>
+		<button class="map-btn" @click="navMap">查看思维导图全景</button>
 	</view>
 </template>
 
 <script>
-	// 引入逻辑层
-	import logic from '@/common/logic.js';
-
-	export default {
-		data() {
-			return {
-				loading: true,
-				hasUser: false,
-				userInfo: null,
-				currentGoal: null,
-				taskList: [],
-				todayTask: null,
-				yesterdayReport: null,
-				todayFeedback: '',
-				isSaving: false
-			}
-		},
-		// 关键点：使用 onLoad 替代 onShow 确保在浏览器刷新时立即执行
-		onLoad() {
-		    this.refreshPage();
-		},
-		onShow() {
-		    // 确保从其他页面返回时也刷新数据
-		    this.refreshPage();
-		},
-		methods: {
-		    refreshPage() {
-		        const goal = uni.getStorageSync('currentGoal');
-		        const tasks = uni.getStorageSync('currentTasks');
-		        
-		        // 关键：如果没有数据，不要停留，直接去设置页
-		        if (!goal || !tasks || tasks.length === 0) {
-		            uni.redirectTo({ url: '/pages/setup/setup' });
-		            return;
-		        }
-		
-		        this.currentGoal = goal;
-		        this.taskList = tasks;
-		
-		        // 获取当前时间字符串
-		        const now = new Date();
-		        const nowStr = `${now.getFullYear()}-${(now.getMonth()+1).toString().padStart(2,'0')}-${now.getDate().toString().padStart(2,'0')}`;
-		        
-		        // 查找今日任务
-		        let todayIdx = this.taskList.findIndex(t => t.date === nowStr);
-		        
-		        // 如果找不到今日（比如用户把系统时间往后调了），默认显示第一天
-		        if (todayIdx === -1) todayIdx = 0;
-		
-		        this.todayTask = this.taskList[todayIdx];
-		        this.todayFeedback = this.todayTask.feedback || '';
-		
-		        // 昨日报告逻辑
-		        if (todayIdx > 0) {
-		            const prev = this.taskList[todayIdx - 1];
-		            // 确保 actions 存在
-		            const actions = prev.actions || [];
-		            const doneCount = actions.filter(a => a.done).length;
-		            this.yesterdayReport = {
-		                rate: actions.length > 0 ? Math.round((doneCount / actions.length) * 100) : 0,
-		                feedback: prev.feedback
-		            };
-		        }
-		        this.loading = false;
-			},
-			toggleAction(index) {
-				this.todayTask.actions[index].done = !this.todayTask.actions[index].done;
-				this.syncStorage();
-			},
-			saveFeedback() {
-				this.isSaving = true;
-				this.todayTask.feedback = this.todayFeedback;
-				this.syncStorage();
-				// 模拟保存延迟感
-				setTimeout(() => { this.isSaving = false; }, 500);
-			},
-			syncStorage() {
-				const idx = this.taskList.findIndex(t => t.date === this.todayTask.date);
-				if (idx !== -1) {
-					this.taskList[idx] = this.todayTask;
-					uni.setStorageSync('currentTasks', this.taskList);
-				}
-			},
-			navToSummary() {
-				uni.navigateTo({ url: '/pages/summary/summary' });
-			},
-			navToAllTasks(){
-			uni.navigateTo({
-			            url: '/pages/full-path/full-path',
-			            fail: (err) => {
-			                console.error("跳转失败，请检查 pages.json 配置:", err);
-			                uni.showToast({ title: '页面丢失', icon: 'none' });
-			            }
-			        });
-			    },
-			reInit() {
-				uni.clearStorageSync();
-				uni.reLaunch({ url: '/pages/setup/setup' });
-			}
+export default {
+	data() {
+		return {
+			uName: '', uGoal: '', progress: 0, greetText: '',
+			todayTask: null, res: '',
+			opts: [{n:'全部完成',v:'all'},{n:'部分完成',v:'part'},{n:'未开始',v:'none'}]
 		}
+	},
+	onShow() {
+		const user = uni.getStorageSync('userInfo');
+		const tasks = uni.getStorageSync('currentTasks');
+		const goal = uni.getStorageSync('currentGoal');
+
+		if (!user || !tasks) {
+			uni.reLaunch({ url: '/pages/setup/setup' });
+			return;
+		}
+
+		this.uName = user.name;
+		this.uGoal = goal.title;
+		
+		const now = new Date();
+		const hr = now.getHours();
+		this.greetText = hr < 12 ? '早安' : (hr < 18 ? '午安' : '晚安');
+
+		// 匹配今日
+		const nowStr = now.toISOString().split('T')[0];
+		const idx = tasks.findIndex(t => t.date === nowStr);
+		this.todayTask = tasks[idx !== -1 ? idx : 0];
+		this.res = this.todayTask.result || '';
+
+		const done = tasks.filter(t => t.isReported).length;
+		this.progress = Math.round((done / tasks.length) * 100);
+	},
+	methods: {
+		save() {
+			if(!this.res) return;
+			let tasks = uni.getStorageSync('currentTasks');
+			let idx = tasks.findIndex(t => t.date === this.todayTask.date);
+			tasks[idx].result = this.res;
+			tasks[idx].isReported = true;
+			uni.setStorageSync('currentTasks', tasks);
+			uni.showToast({title: '已存入修行志'});
+			this.progress = Math.round((tasks.filter(t => t.isReported).length / tasks.length) * 100);
+		},
+		navMap() { uni.navigateTo({ url: '/pages/full-path/full-path' }); }
 	}
+}
 </script>
 
 <style>
-	.container { padding: 30rpx; background-color: #f6f8fb; min-height: 100vh; font-family: -apple-system, system-ui; }
+.container { padding: 40rpx; background: #0f0f1d; min-height: 100vh; color: #fff; }
+.header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 60rpx; }
+.greet { font-size: 40rpx; font-weight: bold; display: block; }
+.goal-now { font-size: 24rpx; color: #d4af37; margin-top: 10rpx; }
+.p-circle { width: 100rpx; height: 100rpx; border: 4rpx solid #d4af37; border-radius: 50%; display: flex; align-items: center; justify-content: center; }
+.p-val { font-size: 24rpx; color: #d4af37; }
 
-	/* 昨日回顾卡片 */
-	.yesterday-box { background: #fff; padding: 25rpx; border-radius: 20rpx; margin-bottom: 40rpx; box-shadow: 0 4rpx 15rpx rgba(0,0,0,0.05); }
-	.box-header { display: flex; justify-content: space-between; margin-bottom: 10rpx; }
-	.box-title { font-size: 24rpx; color: #d4af37; font-weight: bold; }
-	.box-rate { font-size: 22rpx; color: #6b52ae; }
-	.feedback-text { font-size: 26rpx; color: #666; font-style: italic; }
+.task-box { background: rgba(255,255,255,0.05); border-radius: 20rpx; padding: 30rpx; margin-bottom: 40rpx; }
+.task-head { display: flex; justify-content: space-between; font-size: 26rpx; color: #888; margin-bottom: 30rpx; }
+.day-tag { color: #d4af37; }
+.item { display: flex; margin-bottom: 30rpx; }
+.idx { width: 36rpx; height: 36rpx; background: #d4af37; color: #000; border-radius: 50%; text-align: center; line-height: 36rpx; font-size: 22rpx; margin-right: 20rpx; flex-shrink: 0; }
+.t { font-size: 28rpx; font-weight: bold; display: block; }
+.d { font-size: 24rpx; color: #999; margin-top: 4rpx; display: block; }
 
-	/* 思维导图样式区 */
-	.mind-map-container { display: flex; flex-direction: column; align-items: center; padding: 40rpx 0; }
-	.center-node { position: relative; background: #6b52ae; color: #fff; padding: 40rpx 60rpx; border-radius: 60rpx; text-align: center; z-index: 2; }
-	.glow-bg { position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: #6b52ae; filter: blur(20rpx); opacity: 0.3; border-radius: 60rpx; z-index: -1; }
-	.goal-text { font-size: 38rpx; font-weight: bold; color: #ffffff;display: block; letter-spacing: 2rpx; }
-	.duration-text { font-size: 22rpx;color: rgba(255, 255, 255, 0.85); opacity: 0.8; margin-top: 10rpx; display: block; }
-
-	.branch-container { width: 100%; margin-top: 20rpx; }
-	.task-card { display: flex; align-items: center; margin-bottom: 25rpx; }
-	.connector-line { width: 40rpx; height: 2rpx; background: #6b52ae; opacity: 0.3; }
-	.task-content { background: #ffffff; border-left: 10rpx solid #6b52ae; padding: 30rpx; border-radius: 16rpx; box-shadow: 0 4rpx 20rpx rgba(0,0,0,0.08); }
-	.done-bg.task-title { background: #f0fdf4 !important;color: #95a5a6; opacity: 0.8; }
-	
-	.task-main { flex: 1; }
-	.task-title { font-size: 30rpx; color: #1a1a1a; font-weight: bold; margin-bottom: 10rpx; }
-	.task-desc { font-size: 26rpx; color: #4a4a4a; line-height: 1.5; background: #f8f9fa; padding: 15rpx; border-radius: 8rpx; }
-
-	/* 反馈区域 */
-	.feedback-area { background: #fff; padding: 30rpx; border-radius: 24rpx; margin-top: 20rpx; }
-	.label-row { display: flex; justify-content: space-between; align-items: center; }
-	.label { font-size: 26rpx; color: #333; font-weight: bold; }
-	.save-tip { font-size: 20rpx; color: #999; }
-	textarea { width: 100%; height: 160rpx; font-size: 26rpx; color: #555; margin-top: 20rpx; background: #f9f9f9; padding: 15rpx; border-radius: 12rpx; }
-
-	.footer-actions { display: flex; gap: 20rpx; margin-top: 50rpx; padding-bottom: 50rpx; }
-	button { flex: 1; height: 90rpx; line-height: 90rpx; border-radius: 45rpx; font-size: 28rpx; }
-	.btn-outline { background: #fff; color: #6b52ae; border: 1px solid #6b52ae; }
-	.btn-summary { background: #6b52ae; color: #fff; border: none; }
+.review-box { margin-top: 40rpx; }
+.rev-title { font-size: 28rpx; color: #d4af37; margin-bottom: 30rpx; display: block; }
+.btns { display: flex; gap: 20rpx; margin-bottom: 40rpx; }
+.btn { flex: 1; height: 80rpx; line-height: 80rpx; text-align: center; background: #1a1a2e; border-radius: 10rpx; font-size: 24rpx; color: #888; }
+.btn.active { background: #d4af37; color: #000; }
+.save-btn { background: #6b52ae; color: #fff; border-radius: 50rpx; border: none; }
+.map-btn { margin-top: 40rpx; background: none; border: 1px solid #6b52ae; color: #6b52ae; font-size: 24rpx; border-radius: 50rpx; }
 </style>
