@@ -1,0 +1,42 @@
+{
+	"pages": [
+		{
+			"path": "pages/index/index",
+			"style": {
+				"navigationBarTitleText": "梦想目标助手"
+			}
+		},
+		{
+			"path": "pages/setup/setup",
+			"style": {
+				"navigationBarTitleText": "初始设置"
+			}
+		},
+		{
+			"path": "pages/goal/goal",
+			"style": {
+				"navigationBarTitleText": "设定目标"
+			}
+		},
+		{
+			"path": "pages/summary/summary",
+			"style": {
+				"navigationBarTitleText": "结业报告"
+			}
+		},
+		{
+            "path": "pages/full-path/full-path",
+            "style": {
+               "navigationBarTitleText": "全周期修行路径",
+               "navigationBarBackgroundColor": "#6b52ae",
+               "navigationBarTextStyle": "white"
+    }
+        }
+	],
+	"globalStyle": {
+		"navigationBarTextStyle": "black",
+		"navigationBarTitleText": "uni-app",
+		"navigationBarBackgroundColor": "#F8F8F8",
+		"backgroundColor": "#F8F8F8"
+	}
+}
